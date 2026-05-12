@@ -1,0 +1,460 @@
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const cors = require("cors");
+
+const app = express();
+
+app.use(express.json());
+app.use(cors());
+
+/* =========================================
+DAKARIYA AI DATABASE (TEMP MEMORY)
+========================================= */
+
+let users = [];
+let events = [];
+
+/* =========================================
+AI RISK ENGINE
+========================================= */
+
+function calculateRisk() {
+return Math.floor(Math.random() * 100);
+}
+
+/* =========================================
+FULL FRONTEND
+========================================= */
+
+const html = `
+
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  <title>DAKARIYA AI</title>  <style>  
+  
+*{  
+  margin:0;  
+  padding:0;  
+  box-sizing:border-box;  
+  font-family:Arial;  
+}  
+  
+body{  
+  background:#0b0f1a;  
+  color:white;  
+}  
+  
+header{  
+  background:#111827;  
+  padding:15px 30px;  
+  display:flex;  
+  justify-content:space-between;  
+  align-items:center;  
+}  
+  
+header h1{  
+  color:#38bdf8;  
+}  
+  
+nav a{  
+  color:white;  
+  text-decoration:none;  
+  margin-left:20px;  
+}  
+  
+.hero{  
+  text-align:center;  
+  padding:80px 20px;  
+}  
+  
+.hero h2{  
+  font-size:45px;  
+  color:#38bdf8;  
+}  
+  
+.hero p{  
+  margin-top:20px;  
+  color:#cbd5e1;  
+}  
+  
+.btn{  
+  padding:12px 25px;  
+  background:#38bdf8;  
+  border:none;  
+  margin-top:20px;  
+  cursor:pointer;  
+  font-weight:bold;  
+}  
+  
+.container{  
+  padding:20px;  
+}  
+  
+.cards{  
+  display:flex;  
+  gap:20px;  
+  flex-wrap:wrap;  
+  justify-content:center;  
+  margin-top:30px;  
+}  
+  
+.card{  
+  background:#111827;  
+  padding:20px;  
+  border-radius:10px;  
+  width:300px;  
+}  
+  
+.card h3{  
+  color:#38bdf8;  
+}  
+  
+input{  
+  width:100%;  
+  padding:12px;  
+  margin-top:10px;  
+  border:none;  
+  border-radius:5px;  
+}  
+  
+button{  
+  padding:12px;  
+  border:none;  
+  background:#38bdf8;  
+  width:100%;  
+  margin-top:10px;  
+  cursor:pointer;  
+  font-weight:bold;  
+}  
+  
+.feed{  
+  margin-top:20px;  
+}  
+  
+.event{  
+  background:#1f2937;  
+  padding:10px;  
+  margin-top:10px;  
+  border-left:5px solid red;  
+}  
+  
+.safe{  
+  border-left:5px solid green;  
+}  
+  
+.medium{  
+  border-left:5px solid orange;  
+}  
+  
+.danger{  
+  border-left:5px solid red;  
+}  
+  
+.stats{  
+  display:flex;  
+  gap:20px;  
+  flex-wrap:wrap;  
+  margin-top:20px;  
+}  
+  
+.stat{  
+  flex:1;  
+  min-width:200px;  
+  background:#111827;  
+  padding:20px;  
+  border-radius:10px;  
+  text-align:center;  
+}  
+  
+footer{  
+  text-align:center;  
+  padding:30px;  
+  margin-top:50px;  
+  background:#111827;  
+}  
+  
+</style>  </head>  <body>  <header>  
+<h1>DAKARIYA AI</h1>  <nav>  
+<a href="#">Home</a>  
+<a href="#">SOC</a>  
+<a href="#">Security</a>  
+<a href="#">Dashboard</a>  
+</nav>  
+</header>  <section class="hero">  
+<h2>Your Shield in the Digital World</h2>  <p>  
+Enterprise AI-powered cybersecurity monitoring platform.  
+</p>  <button class="btn" onclick="sendEvent()">  
+Simulate Cyber Attack  
+</button>  
+</section>  <div class="container">  <div class="stats">  <div class="stat">  
+<h2 id="userCount">0</h2>  
+<p>Users</p>  
+</div>  <div class="stat">  
+<h2 id="eventCount">0</h2>  
+<p>Threat Events</p>  
+</div>  <div class="stat">  
+<h2>ACTIVE</h2>  
+<p>AI Protection</p>  
+</div>  </div>  <div class="cards">  <div class="card">  <h3>Create Account</h3>  <input id="email" placeholder="Email">  
+<input id="password" type="password" placeholder="Password">  <button onclick="register()">  
+Register  
+</button>  </div>  <div class="card">  <h3>Login</h3>  <input id="lemail" placeholder="Email">  
+<input id="lpassword" type="password" placeholder="Password">  <button onclick="login()">  
+Login  
+</button>  </div>  <div class="card">  <h3>DAKARIYA AI Features</h3>  <p style="margin-top:15px;">  
+✔ Real-time SOC Monitoring  
+</p>  <p style="margin-top:10px;">  
+✔ AI Threat Detection  
+</p>  <p style="margin-top:10px;">  
+✔ Cyber Risk Scoring  
+</p>  <p style="margin-top:10px;">  
+✔ Enterprise Dashboard  
+</p>  </div>  </div>  <div class="feed">  <h2 style="margin-top:40px;">  
+Live SOC Feed  
+</h2>  <div id="feed"></div>  </div>  </div>  <footer>  
+© 2026 DAKARIYA AI | Founded by Engr. Nura Lawan Sulaiman  
+</footer>  <script>  
+  
+async function register(){  
+  
+  const res = await fetch("/register",{  
+    method:"POST",  
+    headers:{  
+      "Content-Type":"application/json"  
+    },  
+    body:JSON.stringify({  
+      email:document.getElementById("email").value,  
+      password:document.getElementById("password").value  
+    })  
+  });  
+  
+  const data = await res.json();  
+  
+  alert(data.msg);  
+  
+  loadStats();  
+}  
+  
+async function login(){  
+  
+  const res = await fetch("/login",{  
+    method:"POST",  
+    headers:{  
+      "Content-Type":"application/json"  
+    },  
+    body:JSON.stringify({  
+      email:document.getElementById("lemail").value,  
+      password:document.getElementById("lpassword").value  
+    })  
+  });  
+  
+  const data = await res.json();  
+  
+  if(data.token){  
+    alert("Login Successful");  
+  }else{  
+    alert(data.msg);  
+  }  
+}  
+  
+async function sendEvent(){  
+  
+  await fetch("/event",{  
+    method:"POST"  
+  });  
+  
+  loadEvents();  
+  loadStats();  
+}  
+  
+async function loadEvents(){  
+  
+  const res = await fetch("/events");  
+  const data = await res.json();  
+  
+  const feed = document.getElementById("feed");  
+  
+  feed.innerHTML = "";  
+  
+  data.forEach(e=>{  
+  
+    let cls = "safe";  
+  
+    if(e.risk > 70){  
+      cls = "danger";  
+    }else if(e.risk > 40){  
+      cls = "medium";  
+    }  
+  
+    feed.innerHTML += \`  
+      <div class="event \${cls}">  
+      ⚠️ Threat Score:  
+      <b>\${e.risk}</b>  
+      |  
+      Time:  
+      \${e.time}  
+      </div>  
+    \`;  
+  
+  });  
+  
+}  
+  
+async function loadStats(){  
+  
+  const res = await fetch("/stats");  
+  const data = await res.json();  
+  
+  document.getElementById("userCount").innerText = data.users;  
+  document.getElementById("eventCount").innerText = data.events;  
+}  
+  
+setInterval(loadEvents,2000);  
+setInterval(loadStats,2000);  
+  
+loadEvents();  
+loadStats();  
+  
+</script>  </body>  
+</html>  
+`;  /* =========================================
+ROUTES
+========================================= */
+
+app.get("/", (req,res)=>{
+res.send(html);
+});
+
+/* =========================================
+REGISTER
+========================================= */
+
+app.post("/register", async (req,res)=>{
+
+const existing = users.find(
+u => u.email === req.body.email
+);
+
+if(existing){
+return res.json({
+msg:"User already exists"
+});
+}
+
+const hashed = await bcrypt.hash(
+req.body.password,
+10
+);
+
+const user = {
+id: users.length + 1,
+email:req.body.email,
+password:hashed,
+plan:"FREE TRIAL"
+};
+
+users.push(user);
+
+res.json({
+msg:"Account created successfully"
+});
+
+});
+
+/* =========================================
+LOGIN
+========================================= */
+
+app.post("/login", async (req,res)=>{
+
+const user = users.find(
+u => u.email === req.body.email
+);
+
+if(!user){
+return res.json({
+msg:"User not found"
+});
+}
+
+const ok = await bcrypt.compare(
+req.body.password,
+user.password
+);
+
+if(!ok){
+return res.json({
+msg:"Wrong password"
+});
+}
+
+const token = jwt.sign(
+{id:user.id},
+"DAKARIYA_SECRET"
+);
+
+res.json({
+token,
+user:{
+email:user.email,
+plan:user.plan
+}
+});
+
+});
+
+/* =========================================
+CREATE THREAT EVENT
+========================================= */
+
+app.post("/event",(req,res)=>{
+
+const risk = calculateRisk();
+
+const event = {
+risk,
+time:new Date().toLocaleString()
+};
+
+events.unshift(event);
+
+if(events.length > 30){
+events.pop();
+}
+
+res.json(event);
+
+});
+
+/* =========================================
+GET EVENTS
+========================================= */
+
+app.get("/events",(req,res)=>{
+res.json(events);
+});
+
+/* =========================================
+ADMIN STATS
+========================================= */
+
+app.get("/stats",(req,res)=>{
+
+res.json({
+users:users.length,
+events:events.length
+});
+
+});
+
+/* =========================================
+START SERVER
+========================================= */
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT,()=>{
+console.log("🚀 DAKARIYA AI RUNNING ON PORT " + PORT);
+});
